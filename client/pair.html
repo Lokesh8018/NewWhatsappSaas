@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Link WhatsApp — WA Gateway</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 100%; max-width: 480px; padding: 0; overflow: hidden; }
+    .header { background: #25d366; padding: 24px; text-align: center; }
+    .header h1 { color: white; font-size: 22px; font-weight: 600; }
+    .header p { color: rgba(255,255,255,0.85); margin-top: 4px; font-size: 14px; }
+    .body { padding: 28px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 6px; }
+    input[type=text], input[type=tel] { width: 100%; padding: 12px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; transition: border-color 0.2s; outline: none; }
+    input:focus { border-color: #25d366; }
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 8px; }
+    .btn-primary { background: #25d366; color: white; }
+    .btn-primary:hover { background: #1ebe5d; }
+    .btn-secondary { background: #f0f2f5; color: #333; }
+    .btn-secondary:hover { background: #e4e6ea; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .method-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .method-tab { flex: 1; padding: 10px; border: 1.5px solid #ddd; border-radius: 8px; text-align: center; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; background: white; }
+    .method-tab.active { border-color: #25d366; background: #f0fff5; color: #25d366; }
+    .qr-container { text-align: center; padding: 20px 0; }
+    .qr-container img { max-width: 220px; border: 1px solid #eee; border-radius: 8px; padding: 8px; }
+    .qr-placeholder { width: 220px; height: 220px; background: #f5f5f5; border-radius: 8px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #999; font-size: 13px; }
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+    .status-connecting { background: #fff3cd; color: #856404; }
+    .status-qr_ready { background: #cfe2ff; color: #0a58ca; }
+    .status-connected { background: #d1e7dd; color: #0f5132; }
+    .status-error { background: #f8d7da; color: #842029; }
+    .pairing-code { font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #25d366; text-align: center; padding: 20px; background: #f0fff5; border-radius: 8px; margin: 16px 0; }
+    .log { background: #f8f9fa; border-radius: 8px; padding: 12px; font-size: 13px; color: #666; min-height: 48px; margin-top: 12px; }
+    .success-icon { font-size: 64px; text-align: center; margin-bottom: 16px; }
+    .success-info { background: #f0fff5; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .success-info p { font-size: 14px; color: #333; margin-bottom: 4px; }
+    .divider { border: none; border-top: 1px solid #f0f2f5; margin: 16px 0; }
+    .spinning { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .error-msg { background: #f8d7da; color: #842029; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 10px; display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📱 Link WhatsApp</h1>
+      <p>Connect your WhatsApp number to the gateway</p>
+    </div>
+    <div class="body">
+
+      <!-- Step 1: Session Name -->
+      <div class="step active" id="step1">
+        <label for="sessionName">Session Label</label>
+        <input type="text" id="sessionName" placeholder="e.g. My Business WhatsApp" maxlength="50" />
+        <div class="error-msg" id="step1Error"></div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="goToStep2()">Continue →</button>
+      </div>
+
+      <!-- Step 2: Choose Method -->
+      <div class="step" id="step2">
+        <p style="font-size:14px;color:#666;margin-bottom:16px;">How would you like to link?</p>
+        <div class="method-tabs">
+          <div class="method-tab active" id="tabQR" onclick="selectMethod('qr')">📷 QR Code</div>
+          <div class="method-tab" id="tabPairing" onclick="selectMethod('pairing')">🔢 Pairing Code</div>
+        </div>
+
+        <div id="methodQR">
+          <p style="font-size:13px;color:#666;margin-bottom:16px;">Open WhatsApp → Settings → Linked Devices → Link a Device, then scan the QR code.</p>
+        </div>
+
+        <div id="methodPairing" style="display:none">
+          <label for="phoneNumber">Phone Number (with country code)</label>
+          <input type="tel" id="phoneNumber" placeholder="e.g. 628123456789" />
+          <p style="font-size:12px;color:#999;margin-top:6px;">Open WhatsApp → Settings → Linked Devices → Link with Phone Number</p>
+        </div>
+
+        <div class="error-msg" id="step2Error"></div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="startPairing()">Start Linking</button>
+        <button class="btn btn-secondary" style="margin-top:8px" onclick="goToStep1()">← Back</button>
+      </div>
+
+      <!-- Step 3: Waiting -->
+      <div class="step" id="step3">
+        <div style="text-align:center;margin-bottom:16px;">
+          <span class="status-badge status-connecting" id="statusBadge">
+            <span class="spinning">⟳</span> Connecting...
+          </span>
+        </div>
+
+        <div id="qrSection">
+          <div class="qr-container">
+            <div class="qr-placeholder" id="qrPlaceholder">⟳ Generating QR Code...</div>
+            <img id="qrImage" style="display:none;max-width:220px;" alt="QR Code" />
+          </div>
+        </div>
+
+        <div id="pairingSection" style="display:none">
+          <p style="text-align:center;font-size:14px;color:#666;margin-bottom:8px;">Enter this code in WhatsApp:</p>
+          <div class="pairing-code" id="pairingCodeDisplay">----</div>
+        </div>
+
+        <div class="log" id="logMsg">Initializing session...</div>
+      </div>
+
+      <!-- Step 4: Success -->
+      <div class="step" id="step4">
+        <div class="success-icon">✅</div>
+        <h2 style="text-align:center;color:#25d366;margin-bottom:8px;">WhatsApp Linked Successfully!</h2>
+        <div class="success-info">
+          <p><strong>Session:</strong> <span id="successSession">—</span></p>
+          <p><strong>Number:</strong> <span id="successNumber">—</span></p>
+        </div>
+        <button class="btn btn-primary" onclick="window.location.href='/pair'">Link Another</button>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    let socket = null;
+    let sessionId = null;
+    let selectedMethod = 'qr';
+    let sessionName = '';
+
+    function showError(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function hideError(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+    function showStep(n) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById('step' + n).classList.add('active');
+    }
+    function selectMethod(method) {
+      selectedMethod = method;
+      document.getElementById('tabQR').classList.toggle('active', method === 'qr');
+      document.getElementById('tabPairing').classList.toggle('active', method === 'pairing');
+      document.getElementById('methodQR').style.display = method === 'qr' ? 'block' : 'none';
+      document.getElementById('methodPairing').style.display = method === 'pairing' ? 'block' : 'none';
+      document.getElementById('qrSection').style.display = method === 'qr' ? 'block' : 'none';
+      document.getElementById('pairingSection').style.display = method === 'pairing' ? 'block' : 'none';
+    }
+    function goToStep1() { showStep(1); }
+    function goToStep2() {
+      sessionName = document.getElementById('sessionName').value.trim();
+      if (!sessionName) { showError('step1Error', 'Please enter a session label.'); return; }
+      hideError('step1Error');
+      showStep(2);
+    }
+    function setStatus(status, text) {
+      const badge = document.getElementById('statusBadge');
+      badge.className = 'status-badge status-' + status;
+      badge.innerHTML = text;
+    }
+    function startPairing() {
+      let phoneNumber = null;
+      if (selectedMethod === 'pairing') {
+        phoneNumber = document.getElementById('phoneNumber').value.trim();
+        if (!phoneNumber) { showError('step2Error', 'Please enter your phone number.'); return; }
+        hideError('step2Error');
+      }
+      hideError('step2Error');
+
+      // Generate unique session ID using crypto
+      const arr = new Uint8Array(8);
+      crypto.getRandomValues(arr);
+      const randHex = Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+      sessionId = 'sess_' + Date.now() + '_' + randHex;
+
+      // Reset UI
+      document.getElementById('qrImage').style.display = 'none';
+      document.getElementById('qrPlaceholder').style.display = 'flex';
+      document.getElementById('qrPlaceholder').textContent = '⟳ Generating QR Code...';
+      document.getElementById('pairingCodeDisplay').textContent = '----';
+      document.getElementById('qrSection').style.display = selectedMethod === 'qr' ? 'block' : 'none';
+      document.getElementById('pairingSection').style.display = selectedMethod === 'pairing' ? 'block' : 'none';
+      document.getElementById('logMsg').textContent = 'Initializing session...';
+      setStatus('connecting', '<span class="spinning">⟳</span> Connecting...');
+
+      showStep(3);
+      connectSocket(phoneNumber);
+    }
+
+    function connectSocket(phoneNumber) {
+      if (socket) socket.disconnect();
+
+      socket = io();
+      socket.emit('join:session', sessionId);
+
+      // Request session creation
+      socket.emit('create:session', {
+        sessionId,
+        name: sessionName,
+        phoneNumber: phoneNumber,
+        method: selectedMethod
+      });
+
+      socket.on('session:qr', (data) => {
+        document.getElementById('qrImage').src = data.qr;
+        document.getElementById('qrImage').style.display = 'block';
+        document.getElementById('qrPlaceholder').style.display = 'none';
+        setStatus('qr_ready', '📷 Scan QR Code');
+        document.getElementById('logMsg').textContent = 'QR Code ready — scan with WhatsApp';
+      });
+
+      socket.on('session:pairing-code', (data) => {
+        document.getElementById('pairingCodeDisplay').textContent = data.code;
+        setStatus('qr_ready', '🔢 Enter Pairing Code');
+        document.getElementById('logMsg').textContent = 'Enter this code in WhatsApp → Linked Devices → Link with Phone Number';
+      });
+
+      socket.on('session:connected', (data) => {
+        setStatus('connected', '✅ Connected!');
+        document.getElementById('logMsg').textContent = 'WhatsApp linked successfully!';
+        document.getElementById('successSession').textContent = sessionName;
+        document.getElementById('successNumber').textContent = data.user?.id?.split(':')[0] || 'Unknown';
+        setTimeout(() => showStep(4), 1500);
+      });
+
+      socket.on('session:status', (data) => {
+        if (data.status === 'connecting') setStatus('connecting', '<span class="spinning">⟳</span> Connecting...');
+        if (data.status === 'pairing') setStatus('qr_ready', '⟳ Getting Pairing Code...');
+      });
+
+      socket.on('session:error', (data) => {
+        setStatus('error', '❌ Error');
+        document.getElementById('logMsg').textContent = data.message || 'An error occurred';
+      });
+    }
+  </script>
+</body>
+</html>

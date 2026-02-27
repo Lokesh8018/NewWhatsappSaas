@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — WA Gateway</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.1); width: 100%; max-width: 380px; overflow: hidden; }
+    .header { background: #25d366; padding: 28px; text-align: center; }
+    .header h1 { color: white; font-size: 22px; font-weight: 700; }
+    .header p { color: rgba(255,255,255,0.85); margin-top: 4px; font-size: 14px; }
+    .body { padding: 28px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #444; margin-bottom: 6px; }
+    input[type=password] { width: 100%; padding: 12px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: #25d366; }
+    .btn { width: 100%; padding: 13px; background: #25d366; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 16px; transition: background 0.2s; }
+    .btn:hover { background: #1ebe5d; }
+    .error { background: #f8d7da; color: #842029; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>🔐 Admin Panel</h1>
+      <p>WhatsApp Gateway Management</p>
+    </div>
+    <div class="body">
+      <% if (error) { %>
+        <div class="error"><%= error %></div>
+      <% } %>
+      <form method="POST" action="/admin/login">
+        <label for="password">Admin Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter password" autofocus required />
+        <button type="submit" class="btn">Login →</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
