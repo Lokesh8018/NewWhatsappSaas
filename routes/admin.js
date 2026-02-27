@@ -20,18 +20,35 @@ function rateLimit(key, maxRequests = 10, windowMs = 60000) {
   return entry.count > maxRequests;
 }
 
-// Simple token-based auth (stored in cookie)
-const ADMIN_TOKEN = "wa_admin_token";
+const crypto = require("crypto");
+
+// In-memory store of valid session tokens (token -> expiry)
+const validTokens = new Map();
+const ADMIN_COOKIE = "wa_admin_session";
+const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+
+function generateToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function isValidToken(token) {
+  if (!token || !validTokens.has(token)) return false;
+  if (Date.now() > validTokens.get(token)) {
+    validTokens.delete(token);
+    return false;
+  }
+  return true;
+}
 
 function isAuthenticated(req, res, next) {
-  if (req.cookies && req.cookies[ADMIN_TOKEN] === global.adminPassword) {
+  if (isValidToken(req.cookies && req.cookies[ADMIN_COOKIE])) {
     return next();
   }
   res.redirect("/admin/login");
 }
 
 function isAuthenticatedAPI(req, res, next) {
-  if (req.cookies && req.cookies[ADMIN_TOKEN] === global.adminPassword) {
+  if (isValidToken(req.cookies && req.cookies[ADMIN_COOKIE])) {
     return next();
   }
   res.status(401).json({ status: false, message: "Unauthorized" });
@@ -49,7 +66,9 @@ router.post("/login", (req, res) => {
   }
   const { password } = req.body;
   if (password === global.adminPassword) {
-    res.cookie(ADMIN_TOKEN, password, { httpOnly: true, sameSite: "Strict", maxAge: 24 * 60 * 60 * 1000 });
+    const token = generateToken();
+    validTokens.set(token, Date.now() + TOKEN_TTL_MS);
+    res.cookie(ADMIN_COOKIE, token, { httpOnly: true, sameSite: "Strict", maxAge: TOKEN_TTL_MS });
     res.redirect("/admin");
   } else {
     res.render("admin/login", { error: "Invalid password" });
@@ -57,7 +76,9 @@ router.post("/login", (req, res) => {
 });
 
 router.get("/logout", (req, res) => {
-  res.clearCookie(ADMIN_TOKEN);
+  const token = req.cookies && req.cookies[ADMIN_COOKIE];
+  if (token) validTokens.delete(token);
+  res.clearCookie(ADMIN_COOKIE);
   res.redirect("/admin/login");
 });
 

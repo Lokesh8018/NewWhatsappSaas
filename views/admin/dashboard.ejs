@@ -276,7 +276,8 @@
 
     loadSessions();
     const SESSION_REFRESH_INTERVAL_MS = 15000;
-    setInterval(loadSessions, SESSION_REFRESH_INTERVAL_MS);
+    const refreshTimer = setInterval(loadSessions, SESSION_REFRESH_INTERVAL_MS);
+    window.addEventListener("pagehide", () => clearInterval(refreshTimer));
   </script>
 </body>
 </html>
