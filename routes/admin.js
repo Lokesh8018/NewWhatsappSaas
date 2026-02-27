@@ -6,6 +6,20 @@ const sessionManager = require("../lib/sessionManager");
 
 const BULK_MESSAGE_DELAY_MS = 500;
 
+// Simple in-memory rate limiter for sensitive endpoints
+const rateLimitMap = new Map();
+function rateLimit(key, maxRequests = 10, windowMs = 60000) {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) {
+    entry.count = 0;
+    entry.resetAt = now + windowMs;
+  }
+  entry.count += 1;
+  rateLimitMap.set(key, entry);
+  return entry.count > maxRequests;
+}
+
 // Simple token-based auth (stored in cookie)
 const ADMIN_TOKEN = "wa_admin_token";
 
@@ -29,6 +43,10 @@ router.get("/login", (req, res) => {
 });
 
 router.post("/login", (req, res) => {
+  const ip = req.ip || req.socket.remoteAddress;
+  if (rateLimit(`login:${ip}`, 10, 60000)) {
+    return res.status(429).render("admin/login", { error: "Too many login attempts. Please wait." });
+  }
   const { password } = req.body;
   if (password === global.adminPassword) {
     res.cookie(ADMIN_TOKEN, password, { httpOnly: true, sameSite: "Strict", maxAge: 24 * 60 * 60 * 1000 });
@@ -59,6 +77,10 @@ router.get("/api/sessions", isAuthenticatedAPI, (req, res) => {
 // POST /admin/api/sessions — Create new session
 router.post("/api/sessions", isAuthenticatedAPI, async (req, res) => {
   try {
+    const ip = req.ip || req.socket.remoteAddress;
+    if (rateLimit(`create_session:${ip}`, 20, 60000)) {
+      return res.status(429).json({ status: false, message: "Too many requests. Please wait before creating more sessions." });
+    }
     const { sessionId, name, phoneNumber } = req.body;
     if (!sessionId) return res.status(400).json({ status: false, message: "sessionId is required" });
 
