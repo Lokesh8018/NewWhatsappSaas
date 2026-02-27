@@ -7,13 +7,14 @@ const cors = require("cors");
 const http = require("http");
 const path = require("path");
 
-const { Botstarted, isConnected, getQR, updateQR, setSocket } = require("./lib/whatsapp");
-const sessionManager = require("./lib/sessionManager");
-const pagesRouter = require("./routes/pages");
-const apiRouter = require("./routes/api");
-const adminRouter = require("./routes/admin");
+const { Botstarted, isConnected, getQR, updateQR, setSocket } = require("./whatsapp");
+const sessionManager = require("./sessionManager");
+const pagesRouter = require("./pagesRoutes");
+const apiRouter = require("./apiRoutes");
+const adminRouter = require("./adminRoutes");
 
 var app = express();
+app.set('trust proxy', 1);
 
 app.use(
   fileUpload({

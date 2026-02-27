@@ -3,15 +3,15 @@ const router = express.Router();
 const path = require("path");
 
 router.get("/", (req, res) => {
-  res.sendFile("./client/index.html", { root: path.resolve(__dirname, "..") });
+  res.sendFile("./client/index.html", { root: __dirname });
 });
 
 router.get("/scan", (req, res) => {
-  res.sendFile("./client/server.html", { root: path.resolve(__dirname, "..") });
+  res.sendFile("./client/server.html", { root: __dirname });
 });
 
 router.get("/pair", (req, res) => {
-  res.sendFile("./client/pair.html", { root: path.resolve(__dirname, "..") });
+  res.sendFile("./client/pair.html", { root: __dirname });
 });
 
 router.get("/health", (req, res) => {
