@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { apiKeyAuth } = require("../middleware/auth");
-const { isConnected, getWhatsAppSocket } = require("../lib/whatsapp");
+const { apiKeyAuth } = require("./auth");
+const { isConnected, getWhatsAppSocket } = require("./whatsapp");
 
 router.all("/send-message", apiKeyAuth, async (req, res) => {
   const pesankirim = req.body.message || req.query.message;

@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const sessionManager = require("../lib/sessionManager");
+const sessionManager = require("./sessionManager");
 const {
   rateLimit,
   generateToken,
@@ -10,7 +10,7 @@ const {
   ADMIN_COOKIE,
   TOKEN_TTL_MS,
   validTokens,
-} = require("../middleware/auth");
+} = require("./auth");
 
 const BULK_MESSAGE_DELAY_MS = 500;
 
