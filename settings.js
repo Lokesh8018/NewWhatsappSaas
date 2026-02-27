@@ -21,3 +21,8 @@ global.kirimkontak_admin = false; // true = automatically send admin contact
 
 global.sessionName = "session"; // session name
 //========================================================
+
+global.adminPassword = "admin123"; // Admin panel password
+global.maxSessions = 10; // Maximum concurrent sessions
+global.sessionDir = "sessions"; // Directory for session auth data
+global.dataDir = "data"; // Directory for metadata

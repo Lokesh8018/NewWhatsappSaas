@@ -6,6 +6,7 @@ const {
   fetchLatestBaileysVersion,
   makeInMemoryStore,
   jidDecode,
+  jidNormalizedUser,
   makeCacheableSignalKeyStore,
   PHONENUMBER_MCC,
 } = require("@adiwajshing/baileys");
@@ -25,6 +26,8 @@ const fs = require("fs");
 const PhoneNumber = require("awesome-phonenumber");
 const path = require("path");
 const { smsg } = require("./lib/simple");
+const sessionManager = require("./lib/sessionManager");
+const adminRouter = require("./routes/admin");
 
 const express = require("express");
 const fileUpload = require("express-fileupload");
@@ -76,6 +79,14 @@ app.get("/", (req, res) => {
     root: __dirname,
   });
 });
+
+app.get("/pair", (req, res) => {
+  res.sendFile("./client/pair.html", {
+    root: __dirname,
+  });
+});
+
+app.use("/admin", adminRouter);
 //fungsi suara capital
 function capital(textSound) {
   const arr = textSound.split(" ");
@@ -313,7 +324,7 @@ async function Botstarted() {
     if (update.qr) {
       qr = update.qr;
       updateQR("qr");
-    } else if ((qr = undefined)) {
+    } else if (qr === undefined) {
       updateQR("loading");
     } else {
       if (update.connection === "open") {
@@ -343,11 +354,37 @@ async function Botstarted() {
 io.on("connection", async (socket) => {
   soket = socket;
   // console.log(sock)
-  if (isConnected) {
+  if (isConnected()) {
     updateQR("connected");
   } else if (qr) {
     updateQR("qr");
   }
+
+  socket.on("join:session", (sessionId) => {
+    socket.join(`session:${sessionId}`);
+  });
+
+  socket.on("create:session", async (data) => {
+    const { sessionId, name, phoneNumber, method } = data;
+    if (!sessionId) return;
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const dataDir = path.resolve(global.dataDir || "data");
+      const metaFile = path.join(dataDir, "sessions.json");
+      let meta = {};
+      try { meta = JSON.parse(fs.readFileSync(metaFile, "utf8")); } catch(e) {}
+      if (!meta[sessionId]) meta[sessionId] = {};
+      meta[sessionId].name = name || sessionId;
+      meta[sessionId].sessionId = sessionId;
+      meta[sessionId].createdAt = meta[sessionId].createdAt || new Date().toISOString();
+      fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
+
+      await sessionManager.createSession(sessionId, method === "pairing" ? phoneNumber : null);
+    } catch (e) {
+      socket.emit("session:error", { message: e.message });
+    }
+  });
 });
 
 // functions
@@ -401,7 +438,7 @@ app.all("/send-message", async (req, res) => {
         }
 
         console.log(await rtaserver.onWhatsApp(numberWA));
-        if (isConnected) {
+        if (isConnected()) {
           const exists = await rtaserver.onWhatsApp(numberWA);
           if (exists?.jid || (exists && exists[0]?.jid)) {
             var usepp = {};
@@ -457,3 +494,6 @@ app.all("/send-message", async (req, res) => {
 });
 
 Botstarted();
+
+sessionManager.setIO(io);
+sessionManager.restoreAllSessions().catch(console.error);
