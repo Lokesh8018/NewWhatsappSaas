@@ -1,58 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const fs = require("fs");
-const path = require("path");
 const sessionManager = require("../lib/sessionManager");
+const {
+  rateLimit,
+  generateToken,
+  isValidToken,
+  isAuthenticated,
+  isAuthenticatedAPI,
+  ADMIN_COOKIE,
+  TOKEN_TTL_MS,
+  validTokens,
+} = require("../middleware/auth");
 
 const BULK_MESSAGE_DELAY_MS = 500;
-
-// Simple in-memory rate limiter for sensitive endpoints
-const rateLimitMap = new Map();
-function rateLimit(key, maxRequests = 10, windowMs = 60000) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
-  if (now > entry.resetAt) {
-    entry.count = 0;
-    entry.resetAt = now + windowMs;
-  }
-  entry.count += 1;
-  rateLimitMap.set(key, entry);
-  return entry.count > maxRequests;
-}
-
-const crypto = require("crypto");
-
-// In-memory store of valid session tokens (token -> expiry)
-const validTokens = new Map();
-const ADMIN_COOKIE = "wa_admin_session";
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
-
-function generateToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-function isValidToken(token) {
-  if (!token || !validTokens.has(token)) return false;
-  if (Date.now() > validTokens.get(token)) {
-    validTokens.delete(token);
-    return false;
-  }
-  return true;
-}
-
-function isAuthenticated(req, res, next) {
-  if (isValidToken(req.cookies && req.cookies[ADMIN_COOKIE])) {
-    return next();
-  }
-  res.redirect("/admin/login");
-}
-
-function isAuthenticatedAPI(req, res, next) {
-  if (isValidToken(req.cookies && req.cookies[ADMIN_COOKIE])) {
-    return next();
-  }
-  res.status(401).json({ status: false, message: "Unauthorized" });
-}
 
 // Login page
 router.get("/login", (req, res) => {
@@ -113,16 +73,10 @@ router.post("/api/sessions", isAuthenticatedAPI, async (req, res) => {
 
     await sessionManager.createSession(sessionId, phoneNumber || null);
 
-    // Save name in metadata
-    const dataDir = path.resolve(global.dataDir || "data");
-    const metaFile = path.join(dataDir, "sessions.json");
-    let meta = {};
-    try { meta = JSON.parse(fs.readFileSync(metaFile, "utf8")); } catch(e) {}
-    if (!meta[sessionId]) meta[sessionId] = {};
-    meta[sessionId].name = name || sessionId;
-    meta[sessionId].sessionId = sessionId;
-    meta[sessionId].createdAt = meta[sessionId].createdAt || new Date().toISOString();
-    fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
+    // Save name in metadata via sessionManager
+    if (name) {
+      sessionManager.updateSessionMeta(sessionId, { name });
+    }
 
     res.json({ status: true, message: "Session created", sessionId });
   } catch (e) {
